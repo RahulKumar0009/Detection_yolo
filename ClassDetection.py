@@ -2,6 +2,7 @@ import random
 
 import cv2
 import numpy as np
+
 from ultralytics import YOLO
 
 # opening the file in read mode
