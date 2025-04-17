@@ -1,22 +1,16 @@
 import random
-
 import cv2
 import numpy as np
-
 from ultralytics import YOLO
 
-# opening the file in read mode
+
 my_file = open("yolov8/utils/coco.txt", "r")
-# reading the file
 data = my_file.read()
-# replacing end splitting the text | when newline ('\n') is seen.
 class_list = data.split("\n")
-
 my_file.close()
-
 # print(class_list)
 
-# Generate random colors for class list
+# Generate random colors for class
 detection_colors = []
 for i in range(len(class_list)):
     r = random.randint(0, 255)
@@ -24,8 +18,7 @@ for i in range(len(class_list)):
     b = random.randint(0, 255)
     detection_colors.append((r, g, b))
 
-# load a pretrained YOLOv8n model
-model = YOLO("yolov8/weights/yolov8n.pt", "v8")
+model = YOLO("yolov8/yolov8n.pt", "v8")
 
 # Vals to resize video frames | small frame optimise the run
 frame_wid = 640
@@ -43,14 +36,9 @@ if not cap.isOpened():
 while True:
     # Capture frame-by-frame
     ret, frame = cap.read()
-    # if frame is read correctly ret is True
-
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
         break
-
-    #  resize the frame | small frame optimise the run
-    # frame = cv2.resize(frame, (frame_wid, frame_hyt))
 
     # Predict on image
     detect_params = model.predict(source=[frame], conf=0.45, save=False)
@@ -62,7 +50,6 @@ while True:
     if len(DP) != 0:
         for i in range(len(detect_params[0])):
             print(i)
-
             boxes = detect_params[0].boxes
             box = boxes[i]  # returns one box
             clsID = box.cls.numpy()[0]
@@ -89,13 +76,10 @@ while True:
                 2,
             )
 
-    # Display the resulting frame
+    # Display the result
     cv2.imshow("ObjectDetection", frame)
-
-    # Terminate run when "Q" pressed
     if cv2.waitKey(1) == ord("q"):
         break
 
-# When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
