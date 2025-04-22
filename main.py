@@ -3,82 +3,50 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 
+# Load class names
+with open("yolov8/utils/coco.txt", "r") as my_file:
+    class_list = my_file.read().split("\n")
 
-my_file = open("yolov8/utils/coco.txt", "r")
-data = my_file.read()
-class_list = data.split("\n")
-my_file.close()
-# print(class_list)
-
-# Generate random colors for class
+# unique color for label
 detection_colors = []
-for i in range(len(class_list)):
-    r = random.randint(0, 255)
-    g = random.randint(0, 255)
-    b = random.randint(0, 255)
-    detection_colors.append((r, g, b))
+for _ in class_list:
+    detection_colors.append(
+        (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    )
 
-model = YOLO("yolov8/yolov8n.pt", "v8")
+# Load model
+model = YOLO("yolov8/yolov8n.pt")
 
-# Vals to resize video frames | small frame optimise the run
-frame_wid = 640
-frame_hyt = 480
-
-#Live Camera
-cap = cv2.VideoCapture(0)
-#detection using video uncommit below
-# cap = cv2.VideoCapture("yolov8/Input/videos/video.mp4")
-
+# Video input
+# cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("yolov8/Input/videos/video1.mp4")
 
 if not cap.isOpened():
-    print("Cannot open camera")
+    print("Cannot open camera or video")
     exit()
 
-
 while True:
-    # Capture frame-by-frame
     ret, frame = cap.read()
     if not ret:
-        print("Can't receive frame (stream end?). Exiting ...")
         break
 
-    # Predict on image
-    detect_params = model.predict(source=[frame], conf=0.45, save=False)
+    # YOLO prediction
+    results = model.predict(source=[frame], conf=0.45, save=False)
+    boxes = results[0].boxes
 
-    # Convert tensor array to numpy
-    DP = detect_params[0].numpy()
-    print(DP)
+    for box in boxes:
+        cls_id = int(box.cls[0])
+        conf = float(box.conf[0])
+        bb = box.xyxy[0].cpu().numpy()
 
-    if len(DP) != 0:
-        for i in range(len(detect_params[0])):
-            print(i)
-            boxes = detect_params[0].boxes
-            box = boxes[i]  # returns one box
-            clsID = box.cls.numpy()[0]
-            conf = box.conf.numpy()[0]
-            bb = box.xyxy.numpy()[0]
+        # Use class ID to assign color
+        color = detection_colors[cls_id]
 
-            cv2.rectangle(
-                frame,
-                (int(bb[0]), int(bb[1])),
-                (int(bb[2]), int(bb[3])),
-                detection_colors[int(clsID)],
-                3,
-            )
+        cv2.rectangle(frame, (int(bb[0]), int(bb[1])), (int(bb[2]), int(bb[3])), color, 2)
+        label = f"{class_list[cls_id]} {round(conf*100, 1)}%"
+        cv2.putText(frame, label, (int(bb[0]), int(bb[1]) - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
-            # Display class name and confidence
-            font = cv2.FONT_HERSHEY_COMPLEX
-            cv2.putText(
-                frame,
-                class_list[int(clsID)] + " " + str(round(conf, 3)) + "%",
-                (int(bb[0]), int(bb[1]) - 10),
-                font,
-                1,
-                (0, 0, 0),  # Set color to black
-                2,
-            )
-
-    # Display the result
     cv2.imshow("ObjectDetection", frame)
     if cv2.waitKey(1) == ord("q"):
         break
